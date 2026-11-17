@@ -106,6 +106,23 @@
   #sessionPanel { background: #fff; border: 3px solid #111 !important; box-shadow: 4px 4px 0 #111; color: #111; }
   #sessionPanel .muted { color: #4a4a5a; }
   header { background: linear-gradient(rgba(11,13,26,.55), rgba(11,13,26,.9)), url('assets/court_640.webp') center/cover; border-bottom: 3px solid #111; padding-bottom: 14px; }
+  nav { position:fixed; left:0; right:0; bottom:0; z-index:20; display:flex; justify-content:space-around; gap:4px; padding:8px 6px; margin:0; background:#111; border-top:3px solid #111; }
+  nav button { flex:1; padding:6px 2px; font-size:1rem; border-radius:4px; }
+  nav button.active { transform:none; box-shadow:none; }
+  body { padding-bottom:84px; }
+  .ob { position:fixed; inset:0; background:rgba(11,13,26,.85); display:flex; align-items:center; justify-content:center; padding:16px; z-index:50; }
+  .ob-card { width:100%; max-width:440px; background:#fff6e0; color:#111; border:3px solid #111; border-radius:6px; box-shadow:6px 6px 0 #111; padding:18px; }
+  .ob-card input { width:100%; }
+  .ob-opt { display:flex; justify-content:space-between; align-items:center; border:2px solid #111; border-radius:4px; padding:10px; margin-bottom:8px; background:#fff; color:#111; cursor:pointer; }
+  .ob-opt.on { background:var(--accent); color:#fff; }
+  .ob-opt.on .muted { color:#fff; }
+  .wk { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:6px; }
+  .wk div { text-align:center; border:2px solid #111; border-radius:4px; padding:6px 0; background:#fff; color:#111; font-weight:700; font-size:.85rem; }
+  .wk div.today { background:var(--accent); color:#fff; }
+  .wk div.done::after { content:'✓'; display:block; color:#0b7a4b; font-size:.8rem; }
+  .ex-thumb { position:relative; height:110px; border:2px solid #111; border-radius:4px; background:linear-gradient(135deg,#111 0%,#3a3f55 100%); overflow:hidden; margin-bottom:8px; }
+  .ex-thumb span { position:absolute; left:8px; top:6px; z-index:2; background:var(--accent); color:#fff; border:2px solid #111; font-family:'Bangers','Impact',sans-serif; letter-spacing:1px; padding:0 8px; font-size:.9rem; }
+  .ex-thumb video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; }
 </style>
 </head>
 <body>
@@ -114,20 +131,23 @@
   <div id="hud"></div>
 </header>
 <nav>
-  <button data-tab="biblioteca" class="active">Biblioteca</button>
+  <button data-tab="inicio" class="active">Inicio</button>
+  <button data-tab="biblioteca">Ejercicios</button>
   <button data-tab="rutina">Mi rutina</button>
-  <button data-tab="progreso">Mi progreso</button>
+  <button data-tab="progreso">Progreso</button>
 </nav>
 
 <main>
   <!-- BIBLIOTECA -->
-  <section id="tab-biblioteca">
-    <div class="card hidden" id="onboard">
-      <h2>¿Qué buscas hoy?</h2>
-      <div class="muted">Elige en qué quieres enfocarte y te armo la rutina.</div>
-      <div class="filters" id="goalBtns" style="margin-top:10px"></div>
-      <button class="btn ghost small" id="obLater">Después</button>
+  <section id="tab-inicio">
+    <div class="card">
+      <h2 id="homeHi">Hola</h2>
+      <div class="wk" id="weekStrip"></div>
     </div>
+    <div class="card" id="todayCard"></div>
+  </section>
+
+  <section id="tab-biblioteca" class="hidden">
     <div class="card">
       <img src="assets/character_360.webp" alt="Mateo, personaje de la app" style="float:right;width:120px;margin:0 0 8px 12px;border:3px solid #111;border-radius:6px;background:#fff">
       <h2>Consejos</h2>
@@ -282,6 +302,17 @@
   </section>
 </main>
 
+<div id="onboard" class="ob hidden">
+  <div class="ob-card">
+    <div class="muted" id="obStep"></div>
+    <div id="obBody" style="margin-top:8px"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn ghost small" id="obBack">Atrás</button>
+      <button class="btn small" id="obNext">Siguiente</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   // ---------- Datos ----------
@@ -378,15 +409,13 @@
   }
 
   // ---------- Pestañas ----------
-  document.querySelectorAll("nav button").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      ["biblioteca", "rutina", "progreso"].forEach(t => $("tab-" + t).classList.add("hidden"));
-      $("tab-" + btn.dataset.tab).classList.remove("hidden");
-      if (btn.dataset.tab === "progreso") renderProgress();
-    });
-  });
+  function showTab(name) {
+    document.querySelectorAll("nav button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+    ["inicio", "biblioteca", "rutina", "progreso"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== name));
+    if (name === "progreso") renderProgress();
+    if (name === "inicio") renderHome();
+  }
+  document.querySelectorAll("nav button").forEach(btn => btn.addEventListener("click", () => showTab(btn.dataset.tab)));
 
   // ---------- Biblioteca ----------
   let currentFund = "Todos";
@@ -405,6 +434,7 @@
     const list = EXERCISES.filter(e => currentFund === "Todos" || e.f === currentFund);
     $("exList").innerHTML = list.map(e => `
       <div class="ex">
+        <div class="ex-thumb"><span>${esc(e.f)}</span><video src="assets/videos/${slugOf(e.n)}.mp4" muted loop playsinline preload="none" onclick="this.paused ? this.play() : this.pause()" onerror="this.remove()"></video></div>
         <h3>${esc(e.n)}</h3>
         <div class="chips">
           <span class="chip">${esc(e.f)}</span>
@@ -428,12 +458,7 @@
     $("pfFocus").value = profile.focus;
   }
   $("saveProfile").addEventListener("click", () => {
-    profile = {
-      level: $("pfLevel").value,
-      time: parseInt($("pfTime").value, 10),
-      place: $("pfPlace").value,
-      focus: $("pfFocus").value
-    };
+    profile = readProfileForm();
     store.set("bbProfile", profile);
     $("profileMsg").textContent = "Perfil guardado. Ahora genera tu rutina.";
   });
@@ -458,20 +483,27 @@
     return { routine, total };
   }
 
-  $("genBtn").addEventListener("click", () => {
-    profile = {
+  function readProfileForm() {
+    return Object.assign({}, profile, {
       level: $("pfLevel").value,
       time: parseInt($("pfTime").value, 10),
       place: $("pfPlace").value,
       focus: $("pfFocus").value
-    };
-    store.set("bbProfile", profile);
-    const p = profile;
-    const { routine, total } = buildRoutine(p);
-    window._lastRoutine = routine;
-    $("routineTitle").textContent = "Rutina de " + p.time + " min · " + p.level + " · " + p.focus + " · " + p.place;
+    });
+  }
+
+  function slugOf(n) {
+    return n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+
+  // Muestra una rutina ya armada, agrupada por bloque, con botón para empezar
+  function showRoutine(routine, title, planIdx) {
+    const total = routine.reduce((s, e) => s + e.min, 0);
+    window._planIdx = planIdx === undefined ? null : planIdx;
+    $("routineTitle").textContent = title;
     if (!routine.length) {
       $("routineList").innerHTML = '<div class="muted">No hay ejercicios que quepan con estos filtros. Prueba con más tiempo, otro enfoque o con aro.</div>';
+      window._lastRoutine = [];
     } else {
       const groups = FUNDAMENTOS.filter(f => routine.some(e => e.f === f));
       const ordered = groups.flatMap(f => routine.filter(e => e.f === f));
@@ -483,14 +515,21 @@
         groups.map(f => {
           const items = ordered.filter(e => e.f === f);
           return '<div class="wk-block"><div class="wk-head"><span>' + esc(f) + '</span><span>' + items.length + ' ejercicios</span></div>' +
-            items.map(e => { n++; return '<div class="wk-row"><div class="wk-num">' + n + '</div><div style="flex:1"><b>' + esc(e.n) + '</b><div class="muted">' + esc(e.d) + '</div></div><span class="chip">' + e.min + ' min</span></div>'; }).join("") +
+            items.map(e => { n++; return '<div class="wk-row"><div class="wk-num">' + n + '</div><div style="flex:1"><b>' + esc(e.n) + '</b><div class="muted">' + esc(e.d || "") + '</div></div><span class="chip">' + e.min + ' min</span></div>'; }).join("") +
             '</div>';
         }).join("") +
         '<div class="muted" style="margin-top:6px">Calienta 5 minutos antes de empezar.</div>';
     }
-    window._lastRoutineText = $("routineTitle").textContent + "\n" + (window._lastRoutine || routine).map((e, i) => `${i + 1}. ${e.n} (${e.min} min): ${e.d}`).join("\n");
+    window._lastRoutineText = title + "\n" + (window._lastRoutine || []).map((e, i) => `${i + 1}. ${e.n} (${e.min} min): ${e.d || ""}`).join("\n");
     $("routineCard").classList.remove("hidden");
     $("sessionPanel").classList.add("hidden");
+  }
+
+  $("genBtn").addEventListener("click", () => {
+    profile = readProfileForm();
+    store.set("bbProfile", profile);
+    const { routine, total } = buildRoutine(profile);
+    showRoutine(routine, "Rutina de " + profile.time + " min · " + profile.level + " · " + profile.focus + " · " + profile.place, null);
   });
 
   $("copyBtn").addEventListener("click", () => {
@@ -546,6 +585,11 @@
         $("finBtn").onclick = () => {
           done.unshift({ id: Date.now(), date: todayKey() });
           store.set("bbDone", done);
+          if (window._planIdx !== null && window._planIdx !== undefined) {
+            const pl = store.get("bbPlan", null);
+            if (pl && pl.days[window._planIdx]) { pl.days[window._planIdx].done = true; store.set("bbPlan", pl); }
+            window._planIdx = null;
+          }
           panel.innerHTML = '<b>Rutina registrada.</b> <span class="muted">+20 XP</span>';
           renderAll();
         };
@@ -730,6 +774,7 @@
   function renderAll() {
     renderHud();
     renderProgress();
+    renderHome();
   }
 
   // ---------- Plan semanal según el enfoque ----------
@@ -742,7 +787,7 @@
         if (i === 6) return { day: d, focus: "Descanso", items: [], total: 0, done: false };
         const f = rotation[i % rotation.length];
         const r = buildRoutine(Object.assign({}, p, { focus: f }));
-        return { day: d, focus: f, items: r.routine.map(e => ({ n: e.n, min: e.min })), total: r.total, done: false };
+        return { day: d, focus: f, items: r.routine.map(e => ({ n: e.n, f: e.f, min: e.min, d: e.d })), total: r.total, done: false };
       })
     };
   }
@@ -774,34 +819,110 @@
     });
   }
   $("planBtn").addEventListener("click", () => {
-    profile = {
-      level: $("pfLevel").value,
-      time: parseInt($("pfTime").value, 10),
-      place: $("pfPlace").value,
-      focus: $("pfFocus").value
-    };
+    profile = readProfileForm();
     store.set("bbProfile", profile);
     store.set("bbPlan", makePlan(profile));
     renderPlan();
   });
 
-  // ---------- Pregunta de enfoque al iniciar ----------
+  // ---------- Inicio y bienvenida ----------
+  function renderHome() {
+    const plan = store.get("bbPlan", null);
+    const todayIdx = (new Date().getDay() + 6) % 7;
+    const DN = ["L", "M", "M", "J", "V", "S", "D"];
+    $("homeHi").textContent = profile.name ? "Hola, " + profile.name : "Hola";
+    $("weekStrip").innerHTML = DN.map((d, i) =>
+      '<div class="' + (i === todayIdx ? 'today ' : '') + (plan && plan.days[i] && plan.days[i].done ? 'done' : '') + '">' + d + '</div>').join("");
+    const card = $("todayCard");
+    if (!plan) {
+      card.innerHTML = '<h2>Hoy</h2><div class="muted">Aún no tienes plan semanal. Ve a Mi rutina y genera uno.</div><button class="btn" id="goPlan">Ir a Mi rutina</button>';
+      $("goPlan").onclick = () => showTab("rutina");
+      return;
+    }
+    const d = plan.days[todayIdx];
+    if (d.focus === "Descanso") {
+      card.innerHTML = '<h2>Hoy</h2><div style="font-family:Bangers,Impact,sans-serif;font-size:2rem">Descanso</div><div class="muted">Estira y recupérate. Mañana seguimos.</div>';
+      return;
+    }
+    if (d.done) {
+      card.innerHTML = '<h2>Hoy · ' + esc(d.focus) + '</h2><div><b>Entrenamiento de hoy completado.</b></div>';
+      return;
+    }
+    card.innerHTML = '<h2>Hoy · ' + esc(d.focus) + '</h2>' +
+      '<div class="muted">' + d.items.length + ' ejercicios · ~' + d.total + ' min</div>' +
+      (d.items.length
+        ? '<button class="btn" id="homeStart">Empezar entrenamiento</button>'
+        : '<div class="muted" style="margin-top:8px">No hay ejercicios con estos filtros. Cambia el lugar o el enfoque en Mi rutina.</div>') +
+      '<div style="margin-top:10px">' + d.items.map(e => '<div class="muted">· ' + esc(e.n) + ' (' + e.min + ' min)</div>').join("") + '</div>';
+    if (d.items.length) {
+      $("homeStart").onclick = () => {
+        showRoutine(d.items, "Hoy · " + d.focus + " (~" + d.total + " min)", todayIdx);
+        showTab("rutina");
+      };
+    }
+  }
+
+  const OB_STEPS = ["name", "level", "pos", "focus", "place"];
+  const POSITIONS = ["Base", "Escolta", "Alero", "Ala-pívot", "Pívot"];
+  const OB_LEVELS = [["Principiante", "Apenas empiezas"], ["Intermedio", "Juegas varias veces a la semana"], ["Avanzado", "Compites en equipo"]];
+  let obStep = 0;
+  let obData = { name: "", level: "Principiante", pos: "Base", focus: "Entrenamiento completo", place: "Con aro", time: 30 };
+
+  function renderObStep() {
+    const s = OB_STEPS[obStep];
+    const title = (t) => '<div style="font-family:Bangers,Impact,sans-serif;font-size:1.6rem;letter-spacing:1px;margin-bottom:8px">' + t + '</div>';
+    const opt = (key, val, sub) => '<div class="ob-opt' + (obData[key] === val ? ' on' : '') + '" data-k="' + key + '" data-v="' + esc(val) + '"><div><b>' + esc(val) + '</b>' + (sub ? '<div class="muted" style="color:inherit">' + esc(sub) + '</div>' : '') + '</div></div>';
+    let html = "";
+    if (s === "name") html = title("¿Cómo te llamas?") + '<input id="obName" placeholder="Tu nombre" value="' + esc(obData.name) + '">';
+    if (s === "level") html = title("¿Qué tan seguido juegas?") + OB_LEVELS.map(([v, sub]) => opt("level", v, sub)).join("");
+    if (s === "pos") html = title("¿En qué posición juegas?") + POSITIONS.map(p => opt("pos", p, "")).join("");
+    if (s === "focus") html = title("¿Qué quieres mejorar?") + FOCUS_OPTIONS.map(f => opt("focus", f, "")).join("");
+    if (s === "place") html = title("¿Dónde entrenas?") + ["Con aro", "Sin aro (casa o calle)"].map(p => opt("place", p, "")).join("") +
+      '<label>Tiempo por día</label><select id="obTime">' + [15, 30, 45, 60].map(t => '<option value="' + t + '"' + (obData.time === t ? ' selected' : '') + '>' + t + ' minutos</option>').join("") + '</select>';
+    $("obStep").textContent = "Paso " + (obStep + 1) + " de " + OB_STEPS.length;
+    $("obBody").innerHTML = html;
+    $("obBack").style.visibility = obStep === 0 ? "hidden" : "visible";
+    $("obNext").textContent = obStep === OB_STEPS.length - 1 ? "Crear mi plan" : "Siguiente";
+    document.querySelectorAll("#obBody .ob-opt").forEach(el => el.onclick = () => { obData[el.dataset.k] = el.dataset.v; renderObStep(); });
+  }
+
+  function finishOnboarding() {
+    $("obBody").innerHTML = '<div style="font-family:Bangers,Impact,sans-serif;font-size:1.8rem;text-align:center;margin:30px 0">Creando tu plan...</div>';
+    $("obNext").style.display = "none";
+    $("obBack").style.display = "none";
+    setTimeout(() => {
+      profile = Object.assign({}, profile, { name: obData.name, level: obData.level, pos: obData.pos, focus: obData.focus, place: obData.place, time: obData.time });
+      store.set("bbProfile", profile);
+      store.set("bbPlan", makePlan(profile));
+      store.set("bbOnboarded", true);
+      $("onboard").classList.add("hidden");
+      $("obNext").style.display = "";
+      $("obBack").style.display = "";
+      fillProfileForm();
+      renderPlan();
+      showTab("inicio");
+    }, 1400);
+  }
+
   function setupOnboarding() {
     if (store.get("bbOnboarded", false)) return;
+    obData = Object.assign({}, obData, { name: profile.name || "", level: profile.level, focus: profile.focus, place: profile.place, time: profile.time });
+    obStep = 0;
     $("onboard").classList.remove("hidden");
-    $("goalBtns").innerHTML = FOCUS_OPTIONS.map(o => '<button class="btn small" data-goal="' + esc(o) + '">' + esc(o) + '</button>').join("");
-    document.querySelectorAll("[data-goal]").forEach(b => {
-      b.onclick = () => {
-        profile.focus = b.dataset.goal;
-        store.set("bbProfile", profile);
-        store.set("bbOnboarded", true);
-        $("onboard").classList.add("hidden");
-        $("pfFocus").value = profile.focus;
-        $("profileMsg").textContent = "Enfoque: " + profile.focus + ". Ahora genera tu rutina.";
-      };
-    });
-    $("obLater").onclick = () => { store.set("bbOnboarded", true); $("onboard").classList.add("hidden"); };
+    renderObStep();
   }
+  $("obNext").addEventListener("click", () => {
+    const s = OB_STEPS[obStep];
+    if (s === "name") {
+      const v = $("obName").value.trim();
+      if (!v) { $("obStep").textContent = "Escribe tu nombre para continuar"; return; }
+      obData.name = v;
+    }
+    if (s === "place") obData.time = parseInt($("obTime").value, 10);
+    if (obStep < OB_STEPS.length - 1) { obStep++; renderObStep(); return; }
+    finishOnboarding();
+  });
+  $("obBack").addEventListener("click", () => { if (obStep > 0) { obStep--; renderObStep(); } });
 
   // ---------- Inicio ----------
   renderFilters();
@@ -810,6 +931,7 @@
   setupOnboarding();
   renderPlan();
   renderAll();
+  showTab("inicio");
 })();
 </script>
 <script>
