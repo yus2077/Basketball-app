@@ -250,6 +250,11 @@
     </div>
 
     <div class="card">
+      <h2>Fortalezas y debilidades</h2>
+      <div id="strengths"></div>
+    </div>
+
+    <div class="card">
       <h2>Historial</h2>
       <div id="logList"></div>
     </div>
@@ -482,10 +487,12 @@
       if (idx >= list.length) {
         const shots = list.filter(e => e.f === "Tiro");
         const zoneOpts = $("pZone").innerHTML;
+        const typeOpts = $("pType").innerHTML;
         panel.innerHTML = '<b>¡Rutina terminada!</b><div class="muted">Anota tus tiros de cada ejercicio de tiro y regístrala para sumar XP y mantener tu racha.</div>' +
           shots.map((e, k) => '<div class="ex"><b>' + esc(e.n) + '</b>' +
             '<div class="row"><div><label>Anotados</label><input type="number" min="0" value="0" data-m="' + k + '"></div>' +
             '<div><label>Intentados</label><input type="number" min="0" value="0" data-a="' + k + '"></div></div>' +
+            '<label>Tipo de tiro</label><select data-t="' + k + '">' + typeOpts + '</select>' +
             '<label>Zona de tiro</label><select data-z="' + k + '">' + zoneOpts + '</select></div>').join("") +
           '<button class="btn small" id="finBtn">Registrar rutina completada</button><div class="muted" id="finMsg" style="margin-top:8px"></div>';
         $("finBtn").onclick = () => {
@@ -496,7 +503,8 @@
             const a = parseInt(panel.querySelector('[data-a="' + k + '"]').value, 10) || 0;
             const z = panel.querySelector('[data-z="' + k + '"]').value;
             if (m < 0 || a < 0 || m > a) err = "En " + e.n + ": los anotados deben estar entre 0 y los intentados.";
-            if (a > 0) rows.push({ id: Date.now() + k, date: todayKey(), type: "Rutina: " + e.n, zone: z, made: m, att: a, notes: "" });
+            const t = panel.querySelector('[data-t="' + k + '"]').value;
+            if (a > 0) rows.push({ id: Date.now() + k, date: todayKey(), type: t, zone: z, made: m, att: a, notes: "Rutina: " + e.n });
           });
           if (err) { $("finMsg").textContent = err; return; }
           log = rows.concat(log);
@@ -537,13 +545,25 @@
       clearInterval(chTimer);
       left = 0;
       if (att === 0) { box.innerHTML = '<div class="muted">No registraste tiros. Intenta de nuevo.</div>'; return; }
-      log.unshift({ id: Date.now(), date: todayKey(), type: "Desafío 1 min", zone: "Desafío", made, att, notes: "" });
-      store.set("bbLog", log);
       const record = made > best;
-      if (record) { best = made; store.set("bbBest", best); }
-      box.innerHTML = '<b>Resultado: ' + made + ' anotados de ' + att + ' (' + Math.round(made / att * 100) + '%)</b>' +
-        '<div class="muted">' + (record ? '¡Nuevo récord!' : 'Tu récord sigue siendo ' + best + '.') + '</div>';
-      renderAll();
+      box.innerHTML = '<b>Tiempo terminado: ' + made + ' anotados de ' + att + ' (' + Math.round(made / att * 100) + '%)</b>' +
+        (record ? '<div class="muted">¡Nuevo récord!</div>' : '') +
+        '<div class="muted" style="margin-top:10px">Encuesta del desafío: confirma los datos y elige el tipo de tiro.</div>' +
+        '<label>Tipo de tiro</label><select id="cTipo">' + $("pType").innerHTML + '</select>' +
+        '<label>Zona de tiro</label><select id="cZona">' + $("pZone").innerHTML + '</select>' +
+        '<div class="row"><div><label>Anotados</label><input type="number" id="cMade" min="0" value="' + made + '"></div>' +
+        '<div><label>Intentados</label><input type="number" id="cAtt" min="1" value="' + att + '"></div></div>' +
+        '<label>Notas (opcional)</label><textarea id="cNotes"></textarea>' +
+        '<button class="btn" id="cSave">Guardar resultado</button><div class="muted" id="cMsg" style="margin-top:8px"></div>';
+      $("cSave").onclick = () => {
+        const m = parseInt($("cMade").value, 10), a = parseInt($("cAtt").value, 10);
+        if (isNaN(a) || a < 1 || isNaN(m) || m < 0 || m > a) { $("cMsg").textContent = "Revisa los números: anotados entre 0 y los intentados."; return; }
+        log.unshift({ id: Date.now(), date: todayKey(), type: $("cTipo").value, zone: $("cZona").value, made: m, att: a, notes: $("cNotes").value.trim() || "Desafío 1 min" });
+        store.set("bbLog", log);
+        if (m > best) { best = m; store.set("bbBest", best); }
+        box.innerHTML = '<b>Resultado guardado: ' + m + ' de ' + a + ' (' + Math.round(m / a * 100) + '%)</b><div class="muted">Récord: ' + best + ' aciertos en 1 minuto.</div>';
+        renderAll();
+      };
     };
     const draw = () => {
       box.innerHTML = '<div class="muted">Récord actual: ' + best + ' aciertos. Toca cada tiro según caiga.</div>' +
@@ -598,6 +618,48 @@
       : '<div class="muted">Registra tiros con zona para ver el mapa de calor.</div>';
   }
 
+  // Agrupa los registros por una clave (tipo de tiro, zona) y calcula porcentaje y tendencia
+  function summarize(keyOf) {
+    const g = {};
+    log.forEach(x => { if (!x.att) return; const k = keyOf(x); (g[k] = g[k] || []).push(x); });
+    const pc = (arr) => {
+      const mm = arr.reduce((s, x) => s + x.made, 0), aa = arr.reduce((s, x) => s + x.att, 0);
+      return aa ? mm / aa * 100 : 0;
+    };
+    return Object.keys(g).map(k => {
+      const list = g[k].slice().sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+      const m = list.reduce((s, x) => s + x.made, 0), a = list.reduce((s, x) => s + x.att, 0);
+      let trend = null;
+      if (list.length >= 4) {
+        const h = Math.floor(list.length / 2);
+        trend = Math.round(pc(list.slice(h)) - pc(list.slice(0, h)));
+      }
+      return { name: k, m, a, pct: Math.round(m / a * 100), sessions: list.length, trend };
+    }).sort((x, y) => y.pct - x.pct);
+  }
+
+  function renderStrengths() {
+    const types = summarize(x => x.type || "Otro");
+    const zones = summarize(x => x.zone || "Sin zona");
+    if (!types.length) {
+      $("strengths").innerHTML = '<div class="muted">Registra tiros para ver tus fortalezas y debilidades.</div>';
+      return;
+    }
+    const rated = types.filter(t => t.a >= 10);
+    const verdict = rated.length >= 2
+      ? '<div><span class="chip on">Fortaleza: ' + esc(rated[0].name) + ' (' + rated[0].pct + '%)</span> ' +
+        '<span class="chip lvl-Avanzado">Debilidad: ' + esc(rated[rated.length - 1].name) + ' (' + rated[rated.length - 1].pct + '%)</span></div>'
+      : '<div class="muted">Necesitas al menos 10 intentos en dos tipos de tiro para marcar fortalezas y debilidades.</div>';
+    const trendTxt = (t) => t.trend === null
+      ? 'Necesitas al menos 4 registros para ver tendencia'
+      : (t.trend > 0 ? 'Mejoró ' + t.trend + ' pts' : t.trend < 0 ? 'Bajó ' + (-t.trend) + ' pts' : 'Sin cambio');
+    const row = (t) => '<div class="log"><div><b>' + esc(t.name) + '</b> · ' + t.m + '/' + t.a + ' (' + t.pct + '%)' +
+      '<div class="muted">' + t.sessions + ' registro(s) · ' + trendTxt(t) + '</div></div></div>';
+    $("strengths").innerHTML = verdict +
+      '<div style="margin-top:10px"><b>Por tipo de tiro</b></div>' + types.map(row).join("") +
+      '<div style="margin-top:10px"><b>Por zona</b></div>' + zones.map(row).join("");
+  }
+
   function renderProgress() {
     const s = stats();
     $("sSessions").textContent = s.sessions;
@@ -608,6 +670,7 @@
     $("badges").innerHTML = badges(s).map(([n, ok]) =>
       '<span class="chip' + (ok ? ' on' : '') + '">' + (ok ? '✓ ' : '') + esc(n) + '</span>').join("");
     renderZones();
+    renderStrengths();
     if (!log.length) {
       $("logList").innerHTML = '<div class="muted">Aún no hay sesiones registradas.</div>';
       return;
