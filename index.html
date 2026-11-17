@@ -114,6 +114,12 @@
 <main>
   <!-- BIBLIOTECA -->
   <section id="tab-biblioteca">
+    <div class="card hidden" id="onboard">
+      <h2>¿Qué buscas hoy?</h2>
+      <div class="muted">Elige en qué quieres enfocarte y te armo la rutina.</div>
+      <div class="filters" id="goalBtns" style="margin-top:10px"></div>
+      <button class="btn ghost small" id="obLater">Después</button>
+    </div>
     <div class="card">
       <img src="assets/character_360.webp" alt="Mateo, personaje de la app" style="float:right;width:120px;margin:0 0 8px 12px;border:3px solid #111;border-radius:6px;background:#fff">
       <h2>Consejos</h2>
@@ -703,10 +709,29 @@
     renderProgress();
   }
 
+  // ---------- Pregunta de enfoque al iniciar ----------
+  function setupOnboarding() {
+    if (store.get("bbOnboarded", false)) return;
+    $("onboard").classList.remove("hidden");
+    $("goalBtns").innerHTML = FOCUS_OPTIONS.map(o => '<button class="btn small" data-goal="' + esc(o) + '">' + esc(o) + '</button>').join("");
+    document.querySelectorAll("[data-goal]").forEach(b => {
+      b.onclick = () => {
+        profile.focus = b.dataset.goal;
+        store.set("bbProfile", profile);
+        store.set("bbOnboarded", true);
+        $("onboard").classList.add("hidden");
+        $("pfFocus").value = profile.focus;
+        $("profileMsg").textContent = "Enfoque: " + profile.focus + ". Ahora genera tu rutina.";
+      };
+    });
+    $("obLater").onclick = () => { store.set("bbOnboarded", true); $("onboard").classList.add("hidden"); };
+  }
+
   // ---------- Inicio ----------
   renderFilters();
   renderExercises();
   fillProfileForm();
+  setupOnboarding();
   renderAll();
 })();
 </script>
