@@ -480,12 +480,30 @@
     const next = () => { clearInterval(sessTimer); running = false; idx++; left = 0; draw(); };
     function draw() {
       if (idx >= list.length) {
-        panel.innerHTML = '<b>¡Rutina terminada!</b><div class="muted">Regístrala para sumar XP y mantener tu racha.</div>' +
-          '<button class="btn small" id="finBtn">Registrar rutina completada</button>';
+        const shots = list.filter(e => e.f === "Tiro");
+        const zoneOpts = $("pZone").innerHTML;
+        panel.innerHTML = '<b>¡Rutina terminada!</b><div class="muted">Anota tus tiros de cada ejercicio de tiro y regístrala para sumar XP y mantener tu racha.</div>' +
+          shots.map((e, k) => '<div class="ex"><b>' + esc(e.n) + '</b>' +
+            '<div class="row"><div><label>Anotados</label><input type="number" min="0" value="0" data-m="' + k + '"></div>' +
+            '<div><label>Intentados</label><input type="number" min="0" value="0" data-a="' + k + '"></div></div>' +
+            '<label>Zona de tiro</label><select data-z="' + k + '">' + zoneOpts + '</select></div>').join("") +
+          '<button class="btn small" id="finBtn">Registrar rutina completada</button><div class="muted" id="finMsg" style="margin-top:8px"></div>';
         $("finBtn").onclick = () => {
+          const rows = [];
+          let err = "";
+          shots.forEach((e, k) => {
+            const m = parseInt(panel.querySelector('[data-m="' + k + '"]').value, 10) || 0;
+            const a = parseInt(panel.querySelector('[data-a="' + k + '"]').value, 10) || 0;
+            const z = panel.querySelector('[data-z="' + k + '"]').value;
+            if (m < 0 || a < 0 || m > a) err = "En " + e.n + ": los anotados deben estar entre 0 y los intentados.";
+            if (a > 0) rows.push({ id: Date.now() + k, date: todayKey(), type: "Rutina: " + e.n, zone: z, made: m, att: a, notes: "" });
+          });
+          if (err) { $("finMsg").textContent = err; return; }
+          log = rows.concat(log);
+          store.set("bbLog", log);
           done.unshift({ id: Date.now(), date: todayKey() });
           store.set("bbDone", done);
-          panel.innerHTML = '<b>Rutina registrada.</b> <span class="muted">+20 XP</span>';
+          panel.innerHTML = '<b>Rutina registrada.</b> <span class="muted">+' + (20 + 10 * rows.length) + ' XP' + (rows.length ? ' (incluye ' + rows.length + ' registro(s) de tiro)' : '') + '</span>';
           renderAll();
         };
         return;
