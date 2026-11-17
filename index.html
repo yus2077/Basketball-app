@@ -57,6 +57,14 @@
   .hidden { display:none; }
   .big { font-size:2.4rem; font-weight:700; color:var(--accent); margin:8px 0; }
   @media (max-width:500px) { .row { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2, 1fr); } .zgrid { grid-template-columns:1fr; } }
+  .wk-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; text-align:center; background:#fff; border:3px solid #111; border-radius:6px; padding:10px; margin-bottom:12px; box-shadow:4px 4px 0 #111; }
+  .wk-stats b { font-family:'Bangers','Impact',sans-serif; font-size:1.8rem; color:var(--accent); text-shadow:2px 2px 0 #111; display:block; }
+  .wk-stats span { color:#333; font-weight:700; font-size:.8rem; }
+  .wk-block { margin-bottom:12px; }
+  .wk-head { display:flex; justify-content:space-between; gap:8px; background:#111; color:#fff; padding:4px 12px; font-family:'Bangers','Impact',sans-serif; letter-spacing:1px; transform:skew(-6deg); margin-bottom:8px; }
+  .wk-row { display:flex; gap:10px; align-items:flex-start; background:#fff; color:#111; border:2px solid #111; border-radius:4px; padding:8px; margin-bottom:6px; }
+  .wk-row .muted { font-size:.82rem; }
+  .wk-num { width:32px; height:32px; flex:0 0 32px; background:var(--accent); border:2px solid #111; border-radius:4px; display:flex; align-items:center; justify-content:center; font-family:'Bangers','Impact',sans-serif; font-size:1.2rem; color:#fff; text-shadow:1px 1px 0 #111; }
   /* Estilo anime deportivo original: tinta, tramas, velocidad */
   :root { --bg:#0b0d1a; --card:#fff6e0; --line:#111; --text:#111; --muted:#4a4a5a; --accent:#ff5a1f; --ok:#1fbf75; }
   body {
@@ -465,14 +473,22 @@
     if (!routine.length) {
       $("routineList").innerHTML = '<div class="muted">No hay ejercicios que quepan con estos filtros. Prueba con más tiempo, otro enfoque o con aro.</div>';
     } else {
-      $("routineList").innerHTML = routine.map((e, i) => `
-        <div class="routine-item">
-          <div><b>${i + 1}. ${esc(e.n)}</b><div class="muted">${esc(e.d)}</div></div>
-          <span class="chip">${e.min} min</span>
-        </div>`).join("") +
-        `<div class="muted" style="margin-top:10px">Total aprox.: ${total} min. Antes de empezar, haz 5 minutos de calentamiento suave.</div>`;
+      const groups = FUNDAMENTOS.filter(f => routine.some(e => e.f === f));
+      const ordered = groups.flatMap(f => routine.filter(e => e.f === f));
+      window._lastRoutine = ordered;
+      let n = 0;
+      $("routineList").innerHTML =
+        '<div class="wk-stats"><div><b>' + ordered.length + '</b><span>Ejercicios</span></div>' +
+        '<div><b>~' + total + '</b><span>Minutos</span></div><div><b>' + groups.length + '</b><span>Bloques</span></div></div>' +
+        groups.map(f => {
+          const items = ordered.filter(e => e.f === f);
+          return '<div class="wk-block"><div class="wk-head"><span>' + esc(f) + '</span><span>' + items.length + ' ejercicios</span></div>' +
+            items.map(e => { n++; return '<div class="wk-row"><div class="wk-num">' + n + '</div><div style="flex:1"><b>' + esc(e.n) + '</b><div class="muted">' + esc(e.d) + '</div></div><span class="chip">' + e.min + ' min</span></div>'; }).join("") +
+            '</div>';
+        }).join("") +
+        '<div class="muted" style="margin-top:6px">Calienta 5 minutos antes de empezar.</div>';
     }
-    window._lastRoutineText = $("routineTitle").textContent + "\n" + routine.map((e, i) => `${i + 1}. ${e.n} (${e.min} min): ${e.d}`).join("\n");
+    window._lastRoutineText = $("routineTitle").textContent + "\n" + (window._lastRoutine || routine).map((e, i) => `${i + 1}. ${e.n} (${e.min} min): ${e.d}`).join("\n");
     $("routineCard").classList.remove("hidden");
     $("sessionPanel").classList.add("hidden");
   });
