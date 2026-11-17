@@ -176,6 +176,13 @@
       <button class="btn" id="genBtn">Generar rutina</button>
     </div>
 
+    <div class="card">
+      <h2>Plan semanal</h2>
+      <div class="muted">Un plan de 7 días según tu enfoque. El domingo es de descanso.</div>
+      <button class="btn" id="planBtn">Generar plan semanal</button>
+      <div id="planList" style="margin-top:10px"></div>
+    </div>
+
     <div class="card hidden" id="routineCard">
       <h2 id="routineTitle"></h2>
       <div id="routineList"></div>
@@ -709,6 +716,59 @@
     renderProgress();
   }
 
+  // ---------- Plan semanal según el enfoque ----------
+  const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+  function makePlan(p) {
+    const rotation = p.focus === "Entrenamiento completo" ? FUNDAMENTOS : [p.focus];
+    return {
+      made: todayKey(),
+      days: DAYS.map((d, i) => {
+        if (i === 6) return { day: d, focus: "Descanso", items: [], total: 0, done: false };
+        const f = rotation[i % rotation.length];
+        const r = buildRoutine(Object.assign({}, p, { focus: f }));
+        return { day: d, focus: f, items: r.routine.map(e => ({ n: e.n, min: e.min })), total: r.total, done: false };
+      })
+    };
+  }
+  function renderPlan() {
+    const plan = store.get("bbPlan", null);
+    if (!plan) { $("planList").innerHTML = ""; return; }
+    $("planList").innerHTML = plan.days.map((d, i) => {
+      const body = d.focus === "Descanso"
+        ? '<div class="muted">Descanso. Estira y recupérate.</div>'
+        : (d.items.length
+            ? d.items.map(e => '<div class="muted">· ' + esc(e.n) + ' (' + e.min + ' min)</div>').join("") +
+              '<div class="muted">Total aprox.: ' + d.total + ' min</div>' +
+              '<button class="btn small" data-hecho="' + i + '" ' + (d.done ? 'disabled' : '') + '>' + (d.done ? 'Hecho' : 'Marcar como hecho') + '</button>'
+            : '<div class="muted">No hay ejercicios con estos filtros. Cambia el lugar o el enfoque.</div>');
+      return '<div class="routine-item"><div style="flex:1"><b>' + d.day + ' · ' + esc(d.focus) + '</b>' + body + '</div></div>';
+    }).join("");
+    document.querySelectorAll("[data-hecho]").forEach(b => {
+      b.onclick = () => {
+        const i = parseInt(b.dataset.hecho, 10);
+        const plan2 = store.get("bbPlan", null);
+        if (!plan2 || plan2.days[i].done) return;
+        plan2.days[i].done = true;
+        store.set("bbPlan", plan2);
+        done.unshift({ id: Date.now() + i, date: todayKey() });
+        store.set("bbDone", done);
+        renderPlan();
+        renderAll();
+      };
+    });
+  }
+  $("planBtn").addEventListener("click", () => {
+    profile = {
+      level: $("pfLevel").value,
+      time: parseInt($("pfTime").value, 10),
+      place: $("pfPlace").value,
+      focus: $("pfFocus").value
+    };
+    store.set("bbProfile", profile);
+    store.set("bbPlan", makePlan(profile));
+    renderPlan();
+  });
+
   // ---------- Pregunta de enfoque al iniciar ----------
   function setupOnboarding() {
     if (store.get("bbOnboarded", false)) return;
@@ -732,6 +792,7 @@
   renderExercises();
   fillProfileForm();
   setupOnboarding();
+  renderPlan();
   renderAll();
 })();
 </script>
