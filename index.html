@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#ff5a1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Entrenador">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Entrenador de Basketball</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --line:#2a2f3a; --text:#eef0f4; --muted:#9aa3b2; --accent:#ff7a1a; --ok:#3ecf8e; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--text); line-height:1.4; }
+  header { padding:20px 16px 4px; text-align:center; }
+  header h1 { margin:0; font-size:1.5rem; }
+  header h1 span { color:var(--accent); }
+  #hud { font-size:.9rem; color:var(--muted); margin-top:4px; }
+  nav { display:flex; gap:6px; justify-content:center; padding:12px 16px; flex-wrap:wrap; }
+  nav button { background:var(--card); color:var(--muted); border:1px solid var(--line); padding:8px 14px; border-radius:999px; cursor:pointer; font-size:.9rem; }
+  nav button.active { background:var(--accent); color:#111; border-color:var(--accent); font-weight:600; }
+  main { max-width:760px; margin:0 auto; padding:8px 16px 40px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .card h2 { margin:0 0 10px; font-size:1.1rem; }
+  label { display:block; font-size:.85rem; color:var(--muted); margin:10px 0 4px; }
+  select, input, textarea { width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:9px 10px; font-size:.95rem; font-family:inherit; }
+  textarea { resize:vertical; min-height:60px; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .btn { background:var(--accent); color:#111; border:0; border-radius:8px; padding:10px 16px; font-weight:600; cursor:pointer; margin-top:12px; font-size:.95rem; }
+  .btn.ghost { background:transparent; color:var(--muted); border:1px solid var(--line); }
+  .btn.small { padding:5px 10px; font-size:.8rem; margin-top:0; }
+  .chip { display:inline-block; font-size:.75rem; padding:3px 9px; border-radius:999px; background:var(--bg); border:1px solid var(--line); color:var(--muted); margin:2px 2px 2px 0; }
+  .chip.on { color:var(--ok); border-color:var(--ok); }
+  .chip.lvl-Principiante { color:var(--ok); }
+  .chip.lvl-Intermedio { color:#ffc24a; }
+  .chip.lvl-Avanzado { color:#ff6b6b; }
+  .ex { border-top:1px solid var(--line); padding:12px 0; }
+  .ex:first-of-type { border-top:0; padding-top:0; }
+  .ex h3 { margin:0 0 4px; font-size:1rem; }
+  .ex p { margin:4px 0 0; color:var(--muted); font-size:.9rem; }
+  .filters { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .routine-item { display:flex; justify-content:space-between; gap:10px; padding:10px 0; border-top:1px solid var(--line); }
+  .routine-item:first-child { border-top:0; }
+  .muted { color:var(--muted); font-size:.9rem; }
+  .stats { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; text-align:center; }
+  .stat b { display:block; font-size:1.3rem; color:var(--accent); }
+  .stat span { font-size:.75rem; color:var(--muted); }
+  .log { border-top:1px solid var(--line); padding:10px 0; display:flex; justify-content:space-between; gap:10px; align-items:center; }
+  .log:first-child { border-top:0; }
+  .zgrid { display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; }
+  .zcell { border:1px solid var(--line); border-radius:10px; padding:10px; color:var(--text); }
+  .zcell span, .zcell small { display:block; font-size:.8rem; color:var(--muted); }
+  .zcell b { font-size:1.2rem; }
+  .hidden { display:none; }
+  .big { font-size:2.4rem; font-weight:700; color:var(--accent); margin:8px 0; }
+  @media (max-width:500px) { .row { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2, 1fr); } .zgrid { grid-template-columns:1fr; } }
+  /* Estilo anime deportivo original: tinta, tramas, velocidad */
+  :root { --bg:#0b0d1a; --card:#fff6e0; --line:#111; --text:#111; --muted:#4a4a5a; --accent:#ff5a1f; --ok:#1fbf75; }
+  body {
+    background:
+      radial-gradient(rgba(255,255,255,.08) 1.2px, transparent 1.4px) 0 0 / 10px 10px,
+      repeating-linear-gradient(115deg, transparent 0 46px, rgba(255,90,31,.07) 46px 48px),
+      var(--bg);
+    min-height: 100vh;
+  }
+  header h1 { font-family: 'Bangers', 'Impact', sans-serif; font-size: 2.6rem; letter-spacing: 2px; color: #fff; text-shadow: 3px 3px 0 #111; transform: skew(-6deg); }
+  header h1 span { color: var(--accent); text-shadow: 3px 3px 0 #111; }
+  #hud { color: #ffe9c7; font-weight: 700; letter-spacing: .5px; }
+  nav button { font-family: 'Bangers', 'Impact', sans-serif; font-size: 1.15rem; letter-spacing: 1px; background: #fff6e0; color: #111; border: 3px solid #111; box-shadow: 3px 3px 0 #111; border-radius: 4px; padding: 6px 14px; }
+  nav button.active { background: var(--accent); color: #fff; text-shadow: 1px 1px 0 #111; transform: translate(-2px, -2px); box-shadow: 5px 5px 0 #111; }
+  .card { position: relative; background: var(--card); color: #111; border: 3px solid #111; border-radius: 6px; box-shadow: 6px 6px 0 #111; }
+  .card::after { content: ''; position: absolute; right: -3px; top: -3px; width: 64px; height: 22px; background: var(--accent); border: 3px solid #111; clip-path: polygon(0 0, 100% 0, 84% 100%, 0 100%); }
+  .card h2 { display: inline-block; font-family: 'Bangers', 'Impact', sans-serif; font-size: 1.6rem; letter-spacing: 1px; background: #111; color: #fff; padding: 2px 12px; transform: skew(-8deg); margin: 0 0 12px; }
+  label { color: #333; font-weight: 700; }
+  select, input, textarea { background: #fff; color: #111; border: 2px solid #111; border-radius: 4px; }
+  .btn { font-family: 'Bangers', 'Impact', sans-serif; font-size: 1.25rem; letter-spacing: 1px; background: var(--accent); color: #fff; border: 3px solid #111; border-radius: 4px; box-shadow: 3px 3px 0 #111; text-shadow: 1px 1px 0 #111; }
+  .btn.ghost { background: #fff; color: #111; text-shadow: none; }
+  .btn.small { font-size: 1rem; }
+  .chip { background: #fff; color: #111; border: 2px solid #111; font-weight: 700; border-radius: 2px; }
+  .chip.on { background: var(--ok); color: #111; }
+  .chip.lvl-Principiante { color: #0b7a4b; }
+  .chip.lvl-Intermedio { color: #9a6200; }
+  .chip.lvl-Avanzado { color: #b3261e; }
+  .ex { border-top: 2px dashed #111; }
+  .ex h3 { font-family: 'Bangers', 'Impact', sans-serif; font-size: 1.3rem; letter-spacing: .5px; color: #111; }
+  .ex p, .routine-item .muted, .muted { color: #4a4a5a; }
+  .routine-item { border-top: 2px dashed #111; }
+  .log { border-top: 2px dashed #111; }
+  .big { font-family: 'Bangers', 'Impact', sans-serif; font-size: 3.2rem; color: var(--accent); text-shadow: 3px 3px 0 #111; }
+  .stat b { font-family: 'Bangers', 'Impact', sans-serif; font-size: 1.8rem; color: var(--accent); text-shadow: 2px 2px 0 #111; }
+  .stat span { color: #333; font-weight: 700; }
+  .zcell { border: 3px solid #111; border-radius: 4px; box-shadow: 3px 3px 0 #111; color: #111; }
+  .zcell span, .zcell small { color: #333; }
+  .zcell b { font-family: 'Bangers', 'Impact', sans-serif; font-size: 1.5rem; }
+  #sessionPanel { background: #fff; border: 3px solid #111 !important; box-shadow: 4px 4px 0 #111; color: #111; }
+  #sessionPanel .muted { color: #4a4a5a; }
+  header { background: linear-gradient(rgba(11,13,26,.55), rgba(11,13,26,.9)), url('assets/court_640.webp') center/cover; border-bottom: 3px solid #111; padding-bottom: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Entrenador de <span>Basketball</span></h1>
+  <div id="hud"></div>
+</header>
+<nav>
+  <button data-tab="biblioteca" class="active">Biblioteca</button>
+  <button data-tab="rutina">Mi rutina</button>
+  <button data-tab="progreso">Mi progreso</button>
+</nav>
+
+<main>
+  <!-- BIBLIOTECA -->
+  <section id="tab-biblioteca">
+    <div class="card">
+      <img src="assets/character_360.webp" alt="Mateo, personaje de la app" style="float:right;width:120px;margin:0 0 8px 12px;border:3px solid #111;border-radius:6px;background:#fff">
+      <h2>Consejos</h2>
+      <div class="muted">1. Calienta 5 minutos antes de cualquier ejercicio.<br>2. Repite la misma rutina antes de cada serie de tiros.<br>3. Registra tus sesiones para ver tu progreso real, no el que sientes.<br>4. Empieza lento y sube la velocidad solo cuando la técnica salga limpia.</div>
+    </div>
+    <div class="filters" id="fundFilters"></div>
+    <div class="card" id="exList"></div>
+  </section>
+
+  <!-- MI RUTINA -->
+  <section id="tab-rutina" class="hidden">
+    <div style="height:120px;border:3px solid #111;border-radius:6px;background:url('assets/gym_640.webp') center/cover;margin-bottom:14px;box-shadow:6px 6px 0 #111"></div>
+    <div class="card">
+      <h2>Mi perfil</h2>
+      <div class="row">
+        <div>
+          <label for="pfLevel">Nivel</label>
+          <select id="pfLevel">
+            <option>Principiante</option>
+            <option>Intermedio</option>
+            <option>Avanzado</option>
+          </select>
+        </div>
+        <div>
+          <label for="pfTime">Tiempo disponible</label>
+          <select id="pfTime">
+            <option value="15">15 minutos</option>
+            <option value="30">30 minutos</option>
+            <option value="45">45 minutos</option>
+            <option value="60">60 minutos</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="pfPlace">Dónde entrenas</label>
+          <select id="pfPlace">
+            <option>Con aro</option>
+            <option>Sin aro (casa o calle)</option>
+          </select>
+        </div>
+        <div>
+          <label for="pfFocus">Enfoque</label>
+          <select id="pfFocus"></select>
+        </div>
+      </div>
+      <button class="btn" id="saveProfile">Guardar perfil</button>
+      <div class="muted" id="profileMsg" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h2>Genera tu rutina</h2>
+      <div class="muted">Usa tu perfil para armar una rutina que quepa en tu tiempo.</div>
+      <button class="btn" id="genBtn">Generar rutina</button>
+    </div>
+
+    <div class="card hidden" id="routineCard">
+      <h2 id="routineTitle"></h2>
+      <div id="routineList"></div>
+      <button class="btn ghost small" id="copyBtn" style="margin-top:12px">Copiar rutina</button>
+      <button class="btn small" id="startBtn" style="margin-top:12px">Empezar rutina</button>
+      <div id="sessionPanel" class="hidden" style="margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:12px"></div>
+    </div>
+  </section>
+
+  <!-- MI PROGRESO -->
+  <section id="tab-progreso" class="hidden">
+    <div class="card">
+      <h2>Resumen</h2>
+      <div class="stats">
+        <div class="stat"><b id="sSessions">0</b><span>Sesiones</span></div>
+        <div class="stat"><b id="sPct">0%</b><span>Efectividad</span></div>
+        <div class="stat"><b id="sStreak">0</b><span>Días de racha</span></div>
+        <div class="stat"><b id="sLevel">1</b><span>Nivel</span></div>
+      </div>
+      <div style="margin-top:12px" id="badges"></div>
+    </div>
+
+    <div class="card">
+      <h2>Desafío de 1 minuto</h2>
+      <div class="muted" id="bestTxt"></div>
+      <button class="btn" id="chStart">Empezar desafío</button>
+      <div id="chBox" class="hidden" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card">
+      <h2>Registrar sesión de tiro</h2>
+      <div class="row">
+        <div>
+          <label for="pDate">Fecha</label>
+          <input type="date" id="pDate">
+        </div>
+        <div>
+          <label for="pType">Tipo de tiro</label>
+          <select id="pType">
+            <option>Tiro libre</option>
+            <option>Tiro de media distancia</option>
+            <option>Triple</option>
+            <option>Bandeja</option>
+            <option>Otro</option>
+          </select>
+        </div>
+      </div>
+      <label for="pZone">Zona de tiro</label>
+      <select id="pZone">
+        <option>Bajo el aro</option>
+        <option>Línea de tiros libres</option>
+        <option>Media distancia izquierda</option>
+        <option>Media distancia centro</option>
+        <option>Media distancia derecha</option>
+        <option>Triple esquina izquierda</option>
+        <option>Triple de frente</option>
+        <option>Triple esquina derecha</option>
+      </select>
+      <div class="row">
+        <div>
+          <label for="pMade">Tiros anotados</label>
+          <input type="number" id="pMade" min="0" value="0">
+        </div>
+        <div>
+          <label for="pAtt">Tiros intentados</label>
+          <input type="number" id="pAtt" min="1" value="10">
+        </div>
+      </div>
+      <label for="pNotes">Notas (opcional)</label>
+      <textarea id="pNotes" placeholder="Ej. Me costó trabajo con la mano de apoyo"></textarea>
+      <button class="btn" id="saveBtn">Guardar sesión</button>
+      <div class="muted" id="saveMsg" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h2>Mapa de calor por zona</h2>
+      <div id="zoneStats"></div>
+    </div>
+
+    <div class="card">
+      <h2>Historial</h2>
+      <div id="logList"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  // ---------- Datos ----------
+  const FUNDAMENTOS = ["Tiro", "Bote", "Pase", "Defensa", "Pies y movilidad", "Acondicionamiento"];
+  const EXERCISES = [
+    { f: "Tiro", n: "Tiro libre en serie", l: "Principiante", min: 8, d: "Lanza 10 tiros libres, anota cuántos entran. Repite 3 series con 1 minuto de descanso." },
+    { f: "Tiro", n: "Tiro de 5 posiciones", l: "Principiante", min: 10, d: "Cinco puntos alrededor del aro, 5 tiros en cada uno. Mide el porcentaje por posición." },
+    { f: "Tiro", n: "Bandeja con ambas manos", l: "Principiante", min: 8, d: "Practica bandejas por ambos lados del aro, alternando la mano de cada lado. 3 series de 8 tiros." },
+    { f: "Tiro", n: "Tiro con mano de apoyo", l: "Intermedio", min: 10, d: "Coloca la mano de apoyo sin tocar el balón. Enfócate en la muñeca y la rotación." },
+    { f: "Tiro", n: "Tiro después de correr", l: "Intermedio", min: 12, d: "Corre 20 metros, para y tira. Simula la fatiga del partido." },
+    { f: "Tiro", n: "Tiro por zonas", l: "Intermedio", min: 12, d: "Tira 5 veces desde cada zona marcada (bajo el aro, media distancia y triple). Anota tu porcentaje por zona en el registro." },
+    { f: "Tiro", n: "Tiros libres tras sprint", l: "Intermedio", min: 8, d: "Corre en sitio 15 segundos a ritmo alto y tira 2 tiros libres. Repite 5 veces." },
+    { f: "Tiro", n: "Triples con contador", l: "Avanzado", min: 15, d: "Desde 5 puntos del perímetro, 5 triples seguidos. Si fallas, empiezas de nuevo." },
+    { f: "Bote", n: "Bote con cada mano", l: "Principiante", min: 6, d: "Bote estacionario 30 segundos con mano derecha, 30 con la izquierda. Mantén la vista al frente." },
+    { f: "Bote", n: "Cambios de mano entre piernas", l: "Intermedio", min: 8, d: "Bote alto y bajo, cambiando de mano entre las piernas. 3 series de 30 segundos." },
+    { f: "Bote", n: "Ocho en el suelo", l: "Intermedio", min: 8, d: "Dibuja un 8 entre las piernas de forma continua. Aumenta la velocidad poco a poco." },
+    { f: "Bote", n: "Zigzag con cambio de dirección", l: "Avanzado", min: 10, d: "Conos o marcas en línea, cambia de mano en cada punto manteniendo el control." },
+    { f: "Pase", n: "Pase contra pared", l: "Principiante", min: 6, d: "Pases de pecho y de rebote contra una pared a 2 metros. Cuenta cuántos atrapas seguidos." },
+    { f: "Pase", n: "Pase con giro", l: "Intermedio", min: 8, d: "Recibe, gira hacia un lado y pasa al frente. Practica ambos lados." },
+    { f: "Pase", n: "Pase de no mirar", l: "Avanzado", min: 10, d: "Pasa mirando a un lado y finge la vista al otro. Ideal con un compañero o pared." },
+    { f: "Defensa", n: "Postura defensiva", l: "Principiante", min: 6, d: "Mantén la postura baja con rodillas flexionadas 45 segundos, 3 veces. Brazos activos." },
+    { f: "Defensa", n: "Deslizamientos laterales", l: "Principiante", min: 8, d: "Desplázate de lado a lado entre dos líneas sin cruzar los pies. 30 segundos por lado." },
+    { f: "Defensa", n: "Closeout", l: "Intermedio", min: 8, d: "Corre rápido hacia un tirador imaginario, frena a 1 paso y levanta la mano." },
+    { f: "Defensa", n: "Defensa 1 contra 1 con sombra", l: "Avanzado", min: 12, d: "Un compañero se mueve con el balón; tú lo sigues sin cruzar las piernas." },
+    { f: "Pies y movilidad", n: "Escalera de agilidad", l: "Principiante", min: 6, d: "Pasos rápidos dentro de una escalera o marcas en el piso. 3 series de 20 segundos." },
+    { f: "Pies y movilidad", n: "Pivote y pivote de reversa", l: "Intermedio", min: 6, d: "Pivotea sobre un pie: frontal, reverso y con cambio de dirección. Mantén el control del cuerpo." },
+    { f: "Pies y movilidad", n: "Salto con parada en dos tiempos", l: "Intermedio", min: 8, d: "Corre, frena en dos pasos y cae con las rodillas flexionadas. Repite 10 veces." },
+    { f: "Acondicionamiento", n: "Sprints de 20 metros", l: "Principiante", min: 8, d: "6 sprints de ida y vuelta con 30 segundos de descanso." },
+    { f: "Acondicionamiento", n: "Intervalos 30-30", l: "Intermedio", min: 10, d: "30 segundos a ritmo alto y 30 caminando, durante 8 minutos." },
+    { f: "Acondicionamiento", n: "Suicidios", l: "Avanzado", min: 12, d: "Líneas de cancha: toca cada línea y regresa. 5 repeticiones con descanso de 1 minuto." }
+  ];
+  const LEVELS = ["Principiante", "Intermedio", "Avanzado"];
+  const FOCUS_OPTIONS = ["Entrenamiento completo", ...FUNDAMENTOS];
+
+  // ---------- Almacenamiento (con respaldo en memoria) ----------
+  const mem = {};
+  const store = {
+    get(k, d) {
+      try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }
+      catch (e) { return k in mem ? mem[k] : d; }
+    },
+    set(k, v) {
+      mem[k] = v;
+      try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+    }
+  };
+
+  let log = store.get("bbLog", []);
+  let done = store.get("bbDone", []);
+  let best = store.get("bbBest", 0);
+  let profile = store.get("bbProfile", { level: "Intermedio", time: 30, place: "Con aro", focus: "Entrenamiento completo" });
+
+  // ---------- Utilidades ----------
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const dkey = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const todayKey = () => dkey(new Date());
+  const fmtTime = (s) => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+  const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  // ---------- Racha, XP, niveles e insignias ----------
+  function activeDays() { return new Set([...log.map(x => x.date), ...done.map(x => x.date)]); }
+  function streak() {
+    const days = activeDays();
+    const d = new Date();
+    if (!days.has(dkey(d))) d.setDate(d.getDate() - 1);
+    let n = 0;
+    while (days.has(dkey(d))) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+  function stats() {
+    const made = log.reduce((s, x) => s + x.made, 0);
+    const att = log.reduce((s, x) => s + x.att, 0);
+    const xp = log.length * 10 + done.length * 20;
+    return {
+      made, att, pct: att ? Math.round(made / att * 100) : 0,
+      xp, level: Math.floor(xp / 100) + 1, streak: streak(),
+      sessions: log.length, routines: done.length, totalAtt: att
+    };
+  }
+  function badges(s) {
+    return [
+      ["Primera sesión", s.sessions >= 1],
+      ["Primera rutina", s.routines >= 1],
+      ["3 días seguidos", s.streak >= 3],
+      ["7 días seguidos", s.streak >= 7],
+      ["100 tiros", s.totalAtt >= 100],
+      ["Nivel 3", s.level >= 3]
+    ];
+  }
+  function renderHud() {
+    const s = stats();
+    $("hud").textContent = "Nivel " + s.level + " · Racha: " + s.streak + (s.streak === 1 ? " día" : " días") + " · " + s.xp + " XP";
+  }
+
+  // ---------- Pestañas ----------
+  document.querySelectorAll("nav button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      ["biblioteca", "rutina", "progreso"].forEach(t => $("tab-" + t).classList.add("hidden"));
+      $("tab-" + btn.dataset.tab).classList.remove("hidden");
+      if (btn.dataset.tab === "progreso") renderProgress();
+    });
+  });
+
+  // ---------- Biblioteca ----------
+  let currentFund = "Todos";
+  function renderFilters() {
+    const wrap = $("fundFilters");
+    wrap.innerHTML = "";
+    ["Todos", ...FUNDAMENTOS].forEach(f => {
+      const b = document.createElement("button");
+      b.className = "btn small" + (f === currentFund ? "" : " ghost");
+      b.textContent = f;
+      b.onclick = () => { currentFund = f; renderFilters(); renderExercises(); };
+      wrap.appendChild(b);
+    });
+  }
+  function renderExercises() {
+    const list = EXERCISES.filter(e => currentFund === "Todos" || e.f === currentFund);
+    $("exList").innerHTML = list.map(e => `
+      <div class="ex">
+        <h3>${esc(e.n)}</h3>
+        <div class="chips">
+          <span class="chip">${esc(e.f)}</span>
+          <span class="chip lvl-${e.l}">${esc(e.l)}</span>
+          <span class="chip">~${e.min} min</span>
+        </div>
+        <p>${esc(e.d)}</p>
+      </div>`).join("");
+  }
+
+  // ---------- Perfil y rutina ----------
+  FOCUS_OPTIONS.forEach(o => {
+    const opt = document.createElement("option");
+    opt.textContent = o;
+    $("pfFocus").appendChild(opt);
+  });
+  function fillProfileForm() {
+    $("pfLevel").value = profile.level;
+    $("pfTime").value = String(profile.time);
+    $("pfPlace").value = profile.place;
+    $("pfFocus").value = profile.focus;
+  }
+  $("saveProfile").addEventListener("click", () => {
+    profile = {
+      level: $("pfLevel").value,
+      time: parseInt($("pfTime").value, 10),
+      place: $("pfPlace").value,
+      focus: $("pfFocus").value
+    };
+    store.set("bbProfile", profile);
+    $("profileMsg").textContent = "Perfil guardado. Ahora genera tu rutina.";
+  });
+
+  function buildRoutine(p) {
+    const allowed = LEVELS.slice(0, LEVELS.indexOf(p.level) + 1);
+    let pool = EXERCISES.filter(e => allowed.includes(e.l));
+    if (p.place.startsWith("Sin aro")) pool = pool.filter(e => e.f !== "Tiro");
+    if (p.focus !== "Entrenamiento completo") pool = pool.filter(e => e.f === p.focus);
+    const routine = [];
+    let total = 0;
+    const tryAdd = (e) => {
+      if (!routine.includes(e) && total + e.min <= p.time) { routine.push(e); total += e.min; }
+    };
+    if (p.focus === "Entrenamiento completo") {
+      FUNDAMENTOS.map(f => shuffle(pool.filter(e => e.f === f)))
+        .filter(a => a.length)
+        .map(a => a[0])
+        .forEach(tryAdd);
+    }
+    shuffle(pool.slice()).forEach(tryAdd);
+    return { routine, total };
+  }
+
+  $("genBtn").addEventListener("click", () => {
+    const p = profile;
+    const { routine, total } = buildRoutine(p);
+    window._lastRoutine = routine;
+    $("routineTitle").textContent = "Rutina de " + p.time + " min · " + p.level + " · " + p.focus + " · " + p.place;
+    if (!routine.length) {
+      $("routineList").innerHTML = '<div class="muted">No hay ejercicios que quepan con estos filtros. Prueba con más tiempo, otro enfoque o con aro.</div>';
+    } else {
+      $("routineList").innerHTML = routine.map((e, i) => `
+        <div class="routine-item">
+          <div><b>${i + 1}. ${esc(e.n)}</b><div class="muted">${esc(e.d)}</div></div>
+          <span class="chip">${e.min} min</span>
+        </div>`).join("") +
+        `<div class="muted" style="margin-top:10px">Total aprox.: ${total} min. Antes de empezar, haz 5 minutos de calentamiento suave.</div>`;
+    }
+    window._lastRoutineText = $("routineTitle").textContent + "\n" + routine.map((e, i) => `${i + 1}. ${e.n} (${e.min} min): ${e.d}`).join("\n");
+    $("routineCard").classList.remove("hidden");
+    $("sessionPanel").classList.add("hidden");
+  });
+
+  $("copyBtn").addEventListener("click", () => {
+    try {
+      navigator.clipboard.writeText(window._lastRoutineText || "").then(
+        () => { $("copyBtn").textContent = "¡Copiada!"; setTimeout(() => $("copyBtn").textContent = "Copiar rutina", 1500); },
+        () => { $("copyBtn").textContent = "No se pudo copiar"; }
+      );
+    } catch (e) { $("copyBtn").textContent = "No se pudo copiar"; }
+  });
+
+  // ---------- Sesión guiada con temporizador ----------
+  let sessTimer = null;
+  $("startBtn").addEventListener("click", () => {
+    const list = window._lastRoutine || [];
+    if (!list.length) return;
+    clearInterval(sessTimer);
+    let idx = 0, left = 0, running = false;
+    const panel = $("sessionPanel");
+    panel.classList.remove("hidden");
+    const next = () => { clearInterval(sessTimer); running = false; idx++; left = 0; draw(); };
+    function draw() {
+      if (idx >= list.length) {
+        panel.innerHTML = '<b>¡Rutina terminada!</b><div class="muted">Regístrala para sumar XP y mantener tu racha.</div>' +
+          '<button class="btn small" id="finBtn">Registrar rutina completada</button>';
+        $("finBtn").onclick = () => {
+          done.unshift({ id: Date.now(), date: todayKey() });
+          store.set("bbDone", done);
+          panel.innerHTML = '<b>Rutina registrada.</b> <span class="muted">+20 XP</span>';
+          renderAll();
+        };
+        return;
+      }
+      const e = list[idx];
+      if (!left) left = e.min * 60;
+      panel.innerHTML = '<div class="muted">Ejercicio ' + (idx + 1) + ' de ' + list.length + '</div>' +
+        '<h3 style="margin:4px 0">' + esc(e.n) + '</h3><div class="muted">' + esc(e.d) + '</div>' +
+        '<div class="big">' + fmtTime(left) + '</div>' +
+        '<button class="btn small" id="togBtn">' + (running ? 'Pausar' : 'Iniciar') + '</button> ' +
+        '<button class="btn small ghost" id="skipBtn">Siguiente</button>';
+      $("togBtn").onclick = () => {
+        running = !running;
+        clearInterval(sessTimer);
+        if (running) sessTimer = setInterval(() => { left--; if (left <= 0) next(); else draw(); }, 1000);
+        draw();
+      };
+      $("skipBtn").onclick = next;
+    }
+    draw();
+  });
+
+  // ---------- Desafío de 1 minuto ----------
+  let chTimer = null;
+  $("chStart").addEventListener("click", () => {
+    clearInterval(chTimer);
+    let left = 60, made = 0, att = 0;
+    const box = $("chBox");
+    box.classList.remove("hidden");
+    const finish = () => {
+      clearInterval(chTimer);
+      left = 0;
+      if (att === 0) { box.innerHTML = '<div class="muted">No registraste tiros. Intenta de nuevo.</div>'; return; }
+      log.unshift({ id: Date.now(), date: todayKey(), type: "Desafío 1 min", zone: "Desafío", made, att, notes: "" });
+      store.set("bbLog", log);
+      const record = made > best;
+      if (record) { best = made; store.set("bbBest", best); }
+      box.innerHTML = '<b>Resultado: ' + made + ' anotados de ' + att + ' (' + Math.round(made / att * 100) + '%)</b>' +
+        '<div class="muted">' + (record ? '¡Nuevo récord!' : 'Tu récord sigue siendo ' + best + '.') + '</div>';
+      renderAll();
+    };
+    const draw = () => {
+      box.innerHTML = '<div class="muted">Récord actual: ' + best + ' aciertos. Toca cada tiro según caiga.</div>' +
+        '<div class="big">' + left + ' s</div>' +
+        '<div>Anotados: <b>' + made + '</b> · Intentos: <b>' + att + '</b></div>' +
+        '<div class="row" style="margin-top:10px"><button class="btn" id="chMake">Anotado</button><button class="btn ghost" id="chMiss">Fallado</button></div>';
+      $("chMake").onclick = () => { if (left > 0) { made++; att++; draw(); } };
+      $("chMiss").onclick = () => { if (left > 0) { att++; draw(); } };
+    };
+    chTimer = setInterval(() => { left--; if (left <= 0) finish(); else draw(); }, 1000);
+    draw();
+  });
+
+  // ---------- Registro de sesiones ----------
+  $("pDate").value = todayKey();
+  $("saveBtn").addEventListener("click", () => {
+    const made = parseInt($("pMade").value, 10);
+    const att = parseInt($("pAtt").value, 10);
+    if (isNaN(att) || att < 1) { $("saveMsg").textContent = "Escribe al menos 1 tiro intentado."; return; }
+    if (isNaN(made) || made < 0 || made > att) { $("saveMsg").textContent = "Los anotados deben estar entre 0 y los intentados."; return; }
+    log.unshift({
+      id: Date.now(),
+      date: $("pDate").value,
+      type: $("pType").value,
+      zone: $("pZone").value,
+      made, att,
+      notes: $("pNotes").value.trim()
+    });
+    store.set("bbLog", log);
+    $("pMade").value = 0;
+    $("pNotes").value = "";
+    $("saveMsg").textContent = "Sesión guardada.";
+    renderAll();
+  });
+
+  // ---------- Progreso ----------
+  function renderZones() {
+    const zones = {};
+    log.forEach(x => {
+      if (!x.att) return;
+      const z = x.zone || "Sin zona";
+      zones[z] = zones[z] || { m: 0, a: 0 };
+      zones[z].m += x.made;
+      zones[z].a += x.att;
+    });
+    const keys = Object.keys(zones);
+    $("zoneStats").innerHTML = keys.length
+      ? '<div class="zgrid">' + keys.map(k => {
+          const p = Math.round(zones[k].m / zones[k].a * 100);
+          return '<div class="zcell" style="background:rgba(255,122,26,' + (0.15 + p / 100 * 0.85).toFixed(2) + ')"><span>' + esc(k) + '</span><b>' + p + '%</b><small>' + zones[k].m + '/' + zones[k].a + '</small></div>';
+        }).join('') + '</div>'
+      : '<div class="muted">Registra tiros con zona para ver el mapa de calor.</div>';
+  }
+
+  function renderProgress() {
+    const s = stats();
+    $("sSessions").textContent = s.sessions;
+    $("sPct").textContent = s.pct + "%";
+    $("sStreak").textContent = s.streak;
+    $("sLevel").textContent = s.level;
+    $("bestTxt").textContent = "Récord: " + best + " aciertos en 1 minuto";
+    $("badges").innerHTML = badges(s).map(([n, ok]) =>
+      '<span class="chip' + (ok ? ' on' : '') + '">' + (ok ? '✓ ' : '') + esc(n) + '</span>').join("");
+    renderZones();
+    if (!log.length) {
+      $("logList").innerHTML = '<div class="muted">Aún no hay sesiones registradas.</div>';
+      return;
+    }
+    $("logList").innerHTML = log.map(x => `
+      <div class="log">
+        <div>
+          <b>${esc(x.type)}</b> · ${esc(x.zone || "Sin zona")} · ${esc(x.date)}
+          <div class="muted">${x.made}/${x.att} anotados (${Math.round(x.made / x.att * 100)}%)${x.notes ? " · " + esc(x.notes) : ""}</div>
+        </div>
+        <button class="btn ghost small" data-del="${x.id}">Borrar</button>
+      </div>`).join("");
+    document.querySelectorAll("[data-del]").forEach(b => {
+      b.onclick = () => {
+        log = log.filter(x => String(x.id) !== b.dataset.del);
+        store.set("bbLog", log);
+        renderAll();
+      };
+    });
+  }
+
+  function renderAll() {
+    renderHud();
+    renderProgress();
+  }
+
+  // ---------- Inicio ----------
+  renderFilters();
+  renderExercises();
+  fillProfileForm();
+  renderAll();
+})();
+</script>
+<script>
+  if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js"); }
+</script>
+</body>
+</html>
