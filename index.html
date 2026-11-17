@@ -113,6 +113,7 @@
   .ob { position:fixed; inset:0; background:rgba(11,13,26,.85); display:flex; align-items:flex-start; justify-content:center; padding:16px; padding-top:max(16px, env(safe-area-inset-top)); padding-bottom:110px; overflow-y:auto; -webkit-overflow-scrolling:touch; z-index:50; }
   .ob-card { width:100%; max-width:440px; margin:auto 0; background:#fff6e0; color:#111; border:3px solid #111; border-radius:6px; box-shadow:6px 6px 0 #111; padding:18px; }
   .ob-card input { width:100%; font-size:1rem; }
+  .ob-title { font-family:'Bangers','Impact',sans-serif; font-size:1.6rem; letter-spacing:1px; margin:6px 0 8px; }
   .ob-card .btn { min-height:44px; min-width:110px; }
   .ob-card .row { position:relative; z-index:2; }
   .ob-opt { display:flex; justify-content:space-between; align-items:center; border:2px solid #111; border-radius:4px; padding:10px; margin-bottom:8px; background:#fff; color:#111; cursor:pointer; }
@@ -125,6 +126,7 @@
   .ex-thumb { position:relative; height:110px; border:2px solid #111; border-radius:4px; background:linear-gradient(135deg,#111 0%,#3a3f55 100%); overflow:hidden; margin-bottom:8px; }
   .ex-thumb span { position:absolute; left:8px; top:6px; z-index:2; background:var(--accent); color:#fff; border:2px solid #111; font-family:'Bangers','Impact',sans-serif; letter-spacing:1px; padding:0 8px; font-size:.9rem; }
   .ex-thumb video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; }
+  .ob.hidden { display:none; }
 </style>
 </head>
 <body>
@@ -307,11 +309,38 @@
 <div id="onboard" class="ob hidden">
   <div class="ob-card">
     <div class="muted" id="obStep"></div>
-    <div id="obBody" style="margin-top:8px"></div>
+    <div class="ob-step" data-s="name" style="margin-top:8px">
+      <div class="ob-title">¿Cómo te llamas?</div>
+      <input id="obName" placeholder="Tu nombre">
+    </div>
+    <div class="ob-step hidden" data-s="level">
+      <div class="ob-title">¿Qué tan seguido juegas?</div>
+      <div id="obLevel"></div>
+    </div>
+    <div class="ob-step hidden" data-s="pos">
+      <div class="ob-title">¿En qué posición juegas?</div>
+      <div id="obPos"></div>
+    </div>
+    <div class="ob-step hidden" data-s="focus">
+      <div class="ob-title">¿Qué quieres mejorar?</div>
+      <div id="obFocus"></div>
+    </div>
+    <div class="ob-step hidden" data-s="place">
+      <div class="ob-title">¿Dónde entrenas?</div>
+      <div id="obPlace"></div>
+      <label>Tiempo por día</label>
+      <select id="obTime">
+        <option value="15">15 minutos</option>
+        <option value="30">30 minutos</option>
+        <option value="45">45 minutos</option>
+        <option value="60">60 minutos</option>
+      </select>
+    </div>
     <div class="row" style="margin-top:14px">
       <button class="btn ghost small" id="obBack">Atrás</button>
       <button class="btn small" id="obNext">Siguiente</button>
     </div>
+    <button class="btn ghost small" id="obSkip" style="margin-top:10px;width:100%">Saltar bienvenida</button>
   </div>
 </div>
 
@@ -870,38 +899,48 @@
   let obStep = 0;
   let obData = { name: "", level: "Principiante", pos: "Base", focus: "Entrenamiento completo", place: "Con aro", time: 30 };
 
-  function renderObStep() {
+  function buildOpts(id, key, items) {
+    $(id).innerHTML = items.map(([v, sub]) =>
+      '<div class="ob-opt" data-k="' + key + '" data-v="' + esc(v) + '"><div><b>' + esc(v) + '</b>' +
+      (sub ? '<div class="muted" style="color:inherit">' + esc(sub) + '</div>' : '') + '</div></div>').join("");
+    $(id).querySelectorAll(".ob-opt").forEach(el => el.addEventListener("click", () => {
+      obData[key] = el.dataset.v;
+      paintOpts();
+    }));
+  }
+  function paintOpts() {
+    document.querySelectorAll("#onboard .ob-opt").forEach(el => el.classList.toggle("on", obData[el.dataset.k] === el.dataset.v));
+  }
+  function buildWizard() {
+    buildOpts("obLevel", "level", OB_LEVELS);
+    buildOpts("obPos", "pos", POSITIONS.map(p => [p, ""]));
+    buildOpts("obFocus", "focus", FOCUS_OPTIONS.map(f => [f, ""]));
+    buildOpts("obPlace", "place", [["Con aro", ""], ["Sin aro (casa o calle)", ""]]);
+  }
+  function showObStep() {
     const s = OB_STEPS[obStep];
-    const title = (t) => '<div style="font-family:Bangers,Impact,sans-serif;font-size:1.6rem;letter-spacing:1px;margin-bottom:8px">' + t + '</div>';
-    const opt = (key, val, sub) => '<div class="ob-opt' + (obData[key] === val ? ' on' : '') + '" data-k="' + key + '" data-v="' + esc(val) + '"><div><b>' + esc(val) + '</b>' + (sub ? '<div class="muted" style="color:inherit">' + esc(sub) + '</div>' : '') + '</div></div>';
-    let html = "";
-    if (s === "name") html = title("¿Cómo te llamas?") + '<input id="obName" placeholder="Tu nombre" value="' + esc(obData.name) + '">';
-    if (s === "level") html = title("¿Qué tan seguido juegas?") + OB_LEVELS.map(([v, sub]) => opt("level", v, sub)).join("");
-    if (s === "pos") html = title("¿En qué posición juegas?") + POSITIONS.map(p => opt("pos", p, "")).join("");
-    if (s === "focus") html = title("¿Qué quieres mejorar?") + FOCUS_OPTIONS.map(f => opt("focus", f, "")).join("");
-    if (s === "place") html = title("¿Dónde entrenas?") + ["Con aro", "Sin aro (casa o calle)"].map(p => opt("place", p, "")).join("") +
-      '<label>Tiempo por día</label><select id="obTime">' + [15, 30, 45, 60].map(t => '<option value="' + t + '"' + (obData.time === t ? ' selected' : '') + '>' + t + ' minutos</option>').join("") + '</select>';
+    document.querySelectorAll("#onboard .ob-step").forEach(el => el.classList.toggle("hidden", el.dataset.s !== s));
     $("obStep").textContent = "Paso " + (obStep + 1) + " de " + OB_STEPS.length;
-    $("obBody").innerHTML = html;
     $("obBack").style.visibility = obStep === 0 ? "hidden" : "visible";
     $("obNext").textContent = obStep === OB_STEPS.length - 1 ? "Crear mi plan" : "Siguiente";
-    document.querySelectorAll("#obBody .ob-opt").forEach(el => el.onclick = () => { obData[el.dataset.k] = el.dataset.v; renderObStep(); });
+    $("obTime").value = String(obData.time);
+    paintOpts();
   }
-
+  function closeOnboarding() {
+    store.set("bbOnboarded", true);
+    $("onboard").classList.add("hidden");
+  }
   function showOnboardError(msg) {
-    $("obBody").innerHTML = '<div class="muted" style="color:#b3261e">Hubo un problema: ' + esc(msg) + '. Toca Atrás y vuelve a Crear mi plan.</div>';
+    $("obStep").textContent = "Hubo un problema: " + msg;
     $("obNext").style.display = "";
     $("obBack").style.display = "";
-    $("obNext").textContent = "Crear mi plan";
   }
-
   function finishOnboarding() {
     try {
       profile = Object.assign({}, profile, { name: obData.name, level: obData.level, pos: obData.pos, focus: obData.focus, place: obData.place, time: obData.time });
       store.set("bbProfile", profile);
       store.set("bbPlan", makePlan(profile));
-      store.set("bbOnboarded", true);
-      $("onboard").classList.add("hidden");
+      closeOnboarding();
       fillProfileForm();
       renderPlan();
       showTab("inicio");
@@ -909,18 +948,19 @@
       showOnboardError(err && err.message ? err.message : String(err));
     }
   }
-
   // Cualquier error no controlado se muestra en la bienvenida en vez de dejarla trabada
   window.addEventListener("error", (ev) => {
     if (!$("onboard").classList.contains("hidden")) showOnboardError(ev.message || "error desconocido");
   });
-
   function setupOnboarding() {
-    if (store.get("bbOnboarded", false)) return;
+    buildWizard();
+    // Si ya tienes plan o ya pasaste la bienvenida, no vuelve a salir
+    if (store.get("bbOnboarded", false) || store.get("bbPlan", null)) { store.set("bbOnboarded", true); return; }
     obData = Object.assign({}, obData, { name: profile.name || "", level: profile.level, focus: profile.focus, place: profile.place, time: profile.time });
+    $("obName").value = obData.name;
     obStep = 0;
+    showObStep();
     $("onboard").classList.remove("hidden");
-    renderObStep();
   }
   $("obNext").addEventListener("click", () => {
     const s = OB_STEPS[obStep];
@@ -929,11 +969,12 @@
       if (!v) { $("obStep").textContent = "Escribe tu nombre para continuar"; return; }
       obData.name = v;
     }
-    if (s === "place") obData.time = parseInt($("obTime").value, 10);
-    if (obStep < OB_STEPS.length - 1) { obStep++; renderObStep(); return; }
+    if (s === "place") obData.time = parseInt($("obTime").value, 10) || 30;
+    if (obStep < OB_STEPS.length - 1) { obStep++; showObStep(); return; }
     finishOnboarding();
   });
-  $("obBack").addEventListener("click", () => { if (obStep > 0) { obStep--; renderObStep(); } });
+  $("obBack").addEventListener("click", () => { if (obStep > 0) { obStep--; showObStep(); } });
+  $("obSkip").addEventListener("click", closeOnboarding);
 
   // ---------- Inicio ----------
   renderFilters();
