@@ -125,6 +125,7 @@
   .wk div.done::after { content:'✓'; display:block; color:#0b7a4b; font-size:.8rem; }
   .ex-thumb { position:relative; height:110px; border:2px solid #111; border-radius:4px; background:linear-gradient(135deg,#111 0%,#3a3f55 100%); overflow:hidden; margin-bottom:8px; }
   .ex-thumb span { position:absolute; left:8px; top:6px; z-index:2; background:var(--accent); color:#fff; border:2px solid #111; font-family:'Bangers','Impact',sans-serif; letter-spacing:1px; padding:0 8px; font-size:.9rem; }
+  .ex-thumb { background-size:cover; background-position:center 30%; }
   .ex-thumb video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; }
   .ob.hidden { display:none; }
 </style>
@@ -375,6 +376,15 @@
     { f: "Acondicionamiento", n: "Intervalos 30-30", l: "Intermedio", min: 10, d: "30 segundos a ritmo alto y 30 caminando, durante 8 minutos." },
     { f: "Acondicionamiento", n: "Suicidios", l: "Avanzado", min: 12, d: "Líneas de cancha: toca cada línea y regresa. 5 repeticiones con descanso de 1 minuto." }
   ];
+  // Imagen de cada fundamento (estilo anime, personaje original)
+  const FUND_IMG = {
+    "Tiro": "assets/fund-tiro.webp",
+    "Bote": "assets/fund-bote.webp",
+    "Pase": "assets/character_360.webp",
+    "Defensa": "assets/fund-defensa.webp",
+    "Pies y movilidad": "assets/fund-pies.webp",
+    "Acondicionamiento": "assets/fund-acond.webp"
+  };
   const LEVELS = ["Principiante", "Intermedio", "Avanzado"];
   const FOCUS_OPTIONS = ["Entrenamiento completo", ...FUNDAMENTOS];
 
@@ -465,7 +475,7 @@
     const list = EXERCISES.filter(e => currentFund === "Todos" || e.f === currentFund);
     $("exList").innerHTML = list.map(e => `
       <div class="ex">
-        <div class="ex-thumb"><span>${esc(e.f)}</span><video src="assets/videos/${slugOf(e.n)}.mp4" muted loop playsinline preload="none" onclick="this.paused ? this.play() : this.pause()" onerror="this.remove()"></video></div>
+        <div class="ex-thumb" style="background-image:url('${FUND_IMG[e.f]}')"><span>${esc(e.f)}</span><video src="assets/videos/${slugOf(e.n)}.mp4" muted loop playsinline preload="none" onclick="this.paused ? this.play() : this.pause()" onerror="this.remove()"></video></div>
         <h3>${esc(e.n)}</h3>
         <div class="chips">
           <span class="chip">${esc(e.f)}</span>
