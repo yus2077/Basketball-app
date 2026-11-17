@@ -433,6 +433,13 @@
   }
 
   $("genBtn").addEventListener("click", () => {
+    profile = {
+      level: $("pfLevel").value,
+      time: parseInt($("pfTime").value, 10),
+      place: $("pfPlace").value,
+      focus: $("pfFocus").value
+    };
+    store.set("bbProfile", profile);
     const p = profile;
     const { routine, total } = buildRoutine(p);
     window._lastRoutine = routine;
