@@ -886,23 +886,32 @@
     document.querySelectorAll("#obBody .ob-opt").forEach(el => el.onclick = () => { obData[el.dataset.k] = el.dataset.v; renderObStep(); });
   }
 
+  function showOnboardError(msg) {
+    $("obBody").innerHTML = '<div class="muted" style="color:#b3261e">Hubo un problema: ' + esc(msg) + '. Toca Atrás y vuelve a Crear mi plan.</div>';
+    $("obNext").style.display = "";
+    $("obBack").style.display = "";
+    $("obNext").textContent = "Crear mi plan";
+  }
+
   function finishOnboarding() {
-    $("obBody").innerHTML = '<div style="font-family:Bangers,Impact,sans-serif;font-size:1.8rem;text-align:center;margin:30px 0">Creando tu plan...</div>';
-    $("obNext").style.display = "none";
-    $("obBack").style.display = "none";
-    setTimeout(() => {
+    try {
       profile = Object.assign({}, profile, { name: obData.name, level: obData.level, pos: obData.pos, focus: obData.focus, place: obData.place, time: obData.time });
       store.set("bbProfile", profile);
       store.set("bbPlan", makePlan(profile));
       store.set("bbOnboarded", true);
       $("onboard").classList.add("hidden");
-      $("obNext").style.display = "";
-      $("obBack").style.display = "";
       fillProfileForm();
       renderPlan();
       showTab("inicio");
-    }, 1400);
+    } catch (err) {
+      showOnboardError(err && err.message ? err.message : String(err));
+    }
   }
+
+  // Cualquier error no controlado se muestra en la bienvenida en vez de dejarla trabada
+  window.addEventListener("error", (ev) => {
+    if (!$("onboard").classList.contains("hidden")) showOnboardError(ev.message || "error desconocido");
+  });
 
   function setupOnboarding() {
     if (store.get("bbOnboarded", false)) return;
