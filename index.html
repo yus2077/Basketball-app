@@ -482,36 +482,42 @@
     let idx = 0, left = 0, running = false;
     const panel = $("sessionPanel");
     panel.classList.remove("hidden");
-    const next = () => { clearInterval(sessTimer); running = false; idx++; left = 0; draw(); };
+    const advance = () => { idx++; left = 0; draw(); };
+    function askShots(e) {
+      panel.innerHTML = '<div class="muted">Ejercicio de tiro terminado: ' + esc(e.n) + '</div>' +
+        '<b>Encuesta del ejercicio</b>' +
+        '<label>Tipo de tiro</label><select id="sType">' + $("pType").innerHTML + '</select>' +
+        '<label>Zona de tiro</label><select id="sZone">' + $("pZone").innerHTML + '</select>' +
+        '<div class="row"><div><label>Anotados</label><input type="number" id="sMade" min="0" value="0"></div>' +
+        '<div><label>Intentados</label><input type="number" id="sAtt" min="0" value="0"></div></div>' +
+        '<button class="btn small" id="sSave">Guardar y seguir</button> <button class="btn small ghost" id="sSkip">Omitir</button>' +
+        '<div class="muted" id="sMsg" style="margin-top:8px"></div>';
+      $("sSave").onclick = () => {
+        const m = parseInt($("sMade").value, 10) || 0, a = parseInt($("sAtt").value, 10) || 0;
+        if (m < 0 || a < 0 || m > a) { $("sMsg").textContent = "Los anotados deben estar entre 0 y los intentados."; return; }
+        if (a > 0) {
+          log.unshift({ id: Date.now(), date: todayKey(), type: $("sType").value, zone: $("sZone").value, made: m, att: a, notes: "Rutina: " + e.n });
+          store.set("bbLog", log);
+          renderAll();
+        }
+        advance();
+      };
+      $("sSkip").onclick = advance;
+    }
+    const next = () => {
+      clearInterval(sessTimer); running = false;
+      const cur = list[idx];
+      if (cur && cur.f === "Tiro") { askShots(cur); return; }
+      advance();
+    };
     function draw() {
       if (idx >= list.length) {
-        const shots = list.filter(e => e.f === "Tiro");
-        const zoneOpts = $("pZone").innerHTML;
-        const typeOpts = $("pType").innerHTML;
-        panel.innerHTML = '<b>¡Rutina terminada!</b><div class="muted">Anota tus tiros de cada ejercicio de tiro y regístrala para sumar XP y mantener tu racha.</div>' +
-          shots.map((e, k) => '<div class="ex"><b>' + esc(e.n) + '</b>' +
-            '<div class="row"><div><label>Anotados</label><input type="number" min="0" value="0" data-m="' + k + '"></div>' +
-            '<div><label>Intentados</label><input type="number" min="0" value="0" data-a="' + k + '"></div></div>' +
-            '<label>Tipo de tiro</label><select data-t="' + k + '">' + typeOpts + '</select>' +
-            '<label>Zona de tiro</label><select data-z="' + k + '">' + zoneOpts + '</select></div>').join("") +
-          '<button class="btn small" id="finBtn">Registrar rutina completada</button><div class="muted" id="finMsg" style="margin-top:8px"></div>';
+        panel.innerHTML = '<b>¡Rutina terminada!</b><div class="muted">Regístrala para sumar XP y mantener tu racha.</div>' +
+          '<button class="btn small" id="finBtn">Registrar rutina completada</button>';
         $("finBtn").onclick = () => {
-          const rows = [];
-          let err = "";
-          shots.forEach((e, k) => {
-            const m = parseInt(panel.querySelector('[data-m="' + k + '"]').value, 10) || 0;
-            const a = parseInt(panel.querySelector('[data-a="' + k + '"]').value, 10) || 0;
-            const z = panel.querySelector('[data-z="' + k + '"]').value;
-            if (m < 0 || a < 0 || m > a) err = "En " + e.n + ": los anotados deben estar entre 0 y los intentados.";
-            const t = panel.querySelector('[data-t="' + k + '"]').value;
-            if (a > 0) rows.push({ id: Date.now() + k, date: todayKey(), type: t, zone: z, made: m, att: a, notes: "Rutina: " + e.n });
-          });
-          if (err) { $("finMsg").textContent = err; return; }
-          log = rows.concat(log);
-          store.set("bbLog", log);
           done.unshift({ id: Date.now(), date: todayKey() });
           store.set("bbDone", done);
-          panel.innerHTML = '<b>Rutina registrada.</b> <span class="muted">+' + (20 + 10 * rows.length) + ' XP' + (rows.length ? ' (incluye ' + rows.length + ' registro(s) de tiro)' : '') + '</span>';
+          panel.innerHTML = '<b>Rutina registrada.</b> <span class="muted">+20 XP</span>';
           renderAll();
         };
         return;
